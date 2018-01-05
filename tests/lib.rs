@@ -6,6 +6,7 @@ use irc::*;
 fn test_irc_message_from_str() {
     let raw_str = ":irc.server NOTICE * :*** Looking up your hostname...";
     let generated = Ok(IrcMessage {
+        tags: Vec::new(),
         prefix: String::from("irc.server"),
         command: String::from("NOTICE"),
         params: vec![
@@ -53,4 +54,38 @@ fn test_irc_message_from_str_params_2() {
     let compare = vec!["*", ":*** Looking up your hostname..."];
 
     assert_ne!(correct.params, compare);
+}
+
+#[test]
+fn test_irc_message_from_str_tags() {
+    let raw_str = "@aaa=bbb;ccc;example.com/ddd=eee :nick!ident@host.com PRIVMSG me :Hello";
+    let correct = IrcMessage::from_str(raw_str).unwrap();
+    let compare = vec![
+        MessageTag {
+            key: String::from("aaa"),
+            value: Some(String::from("bbb")),
+        },
+        MessageTag {
+            key: String::from("ccc"),
+            value: None,
+        },
+        MessageTag {
+            key: String::from("example.com/ddd"),
+            value: Some(String::from("eee")),
+        },
+    ];
+
+    assert_eq!(correct.tags, compare);
+}
+
+#[test]
+fn test_irc_message_tag_from_str() {
+    let raw_str = "example.com/ddd=eee";
+    let correct = MessageTag::from_str(raw_str).unwrap();
+    let generated = MessageTag {
+        key: String::from("example.com/ddd"),
+        value: Some(String::from("eee")),
+    };
+
+    assert_eq!(correct, generated);
 }
