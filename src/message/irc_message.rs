@@ -10,7 +10,7 @@ pub struct IrcMessage {
 
 impl PartialEq for IrcMessage {
     fn eq(&self, other: &IrcMessage) -> bool {
-        self.raw_message == other.raw_message
+        self.prefix == other.prefix && self.command == other.command && self.params == other.params
     }
 }
 

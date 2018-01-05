@@ -10,7 +10,7 @@ fn test_irc_message_from_str() {
         command: String::from("NOTICE"),
         params: vec![
             String::from("*"),
-            String::from(":*** Looking up your hostname..."),
+            String::from("*** Looking up your hostname..."),
         ],
         raw_message: String::from(raw_str),
     });
