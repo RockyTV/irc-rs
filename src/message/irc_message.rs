@@ -38,10 +38,10 @@ impl FromStr for MessageTag {
 
 #[derive(Debug)]
 pub struct IrcMessage {
-    pub tags: Vec<MessageTag>,
-    pub prefix: String,
+    pub tags: Option<Vec<MessageTag>>,
+    pub prefix: Option<String>,
     pub command: String,
-    pub params: Vec<String>,
+    pub params: Option<Vec<String>>,
     pub raw_message: String,
 }
 
@@ -58,20 +58,22 @@ impl FromStr for IrcMessage {
         let mut _msg = s.trim();
         let raw_msg = String::from(_msg);
 
-        let mut tags: Vec<MessageTag> = Vec::new();
-        let mut prefix = String::new();
+        let mut tags: Option<Vec<MessageTag>> = None;
+        let mut prefix: Option<String> = None;
         let mut command = String::new();
-        let mut params: Vec<String> = Vec::new();
+        let mut params: Option<Vec<String>> = None;
 
         // Parse message tags
         if _msg.starts_with("@") {
             match _msg.find(' ') {
                 Some(whitespace) => {
                     let _tags: &Vec<&str> = &_msg[1..whitespace].split(';').collect();
-                    tags = _tags
-                        .iter()
-                        .map(|x| MessageTag::from_str(x).unwrap())
-                        .collect::<Vec<MessageTag>>();
+                    tags = Some(
+                        _tags
+                            .iter()
+                            .map(|x| MessageTag::from_str(x).unwrap())
+                            .collect::<Vec<MessageTag>>(),
+                    );
                 }
                 None => return Err(String::from("Error parsing message tags (invalid format)")),
             }
@@ -82,7 +84,7 @@ impl FromStr for IrcMessage {
             match _msg.find(' ') {
                 Some(whitespace) => {
                     prefix = match String::from_str(&_msg[1..whitespace]) {
-                        Ok(x) => x,
+                        Ok(x) => Some(x),
                         Err(_) => {
                             return Err(String::from(
                                 "Error parsing message prefix (&str) to String",
@@ -114,28 +116,27 @@ impl FromStr for IrcMessage {
                     };
                     _msg = &_msg[whitespace + 1..];
 
-                    while _msg != "" {
-                        if _msg.starts_with(":") {
-                            params.push(String::from(&_msg[1..]));
-                            break;
+                    let mut _params: Vec<&str> = Vec::new();
+                    match _msg.find(':') {
+                        Some(colon) => {
+                            let _raw_params = _msg.split_at(colon);
+                            _params.extend(_raw_params.0.split_whitespace());
+                            _params.push(&_raw_params.1[1..]);
+                            params = Some(
+                                _params
+                                    .iter()
+                                    .map(|x| String::from_str(x).unwrap())
+                                    .collect::<Vec<String>>(),
+                            );
                         }
-
-                        if !_msg.contains(' ') {
-                            params.push(String::from(_msg));
-                            let _msg: &str;
-                            break;
-                        }
-
-                        match _msg.find(' ') {
-                            Some(whitespace) => {
-                                params.push(String::from(&_msg[..whitespace]));
-                                _msg = &_msg[whitespace + 1..];
-                            }
-                            None => {
-                                return Err(String::from(
-                                    "Error parsing message parameters (invalid format)",
-                                ))
-                            }
+                        None => {
+                            _params.extend(_msg.split_whitespace());
+                            params = Some(
+                                _params
+                                    .iter()
+                                    .map(|param| String::from_str(param).unwrap())
+                                    .collect::<Vec<String>>(),
+                            );
                         }
                     }
                 }
