@@ -17,23 +17,23 @@ impl PartialEq for IrcMessage {
 impl FromStr for IrcMessage {
     type Err = String;
     fn from_str(s: &str) -> Result<IrcMessage, String> {
-        // :this.is.a.prefix COMMAND param1 param2 :param 3 with spaces
-        let mut msg = s.trim();
-        let mut raw_msg = String::from(msg);
+        // Inspired by SirCmpwn's ChatSharp library
+        let mut _msg = s.trim();
+        let raw_msg = String::from(_msg);
 
         let mut prefix = String::new();
         let mut command = String::new();
         let mut params: Vec<String> = Vec::new();
 
-        if msg.starts_with(":") {
-            match msg.find(' ') {
+        if _msg.starts_with(":") {
+            match _msg.find(' ') {
                 Some(whitespace) => {
-                    prefix = match String::from_str(&msg[1..whitespace]) {
+                    prefix = match String::from_str(&_msg[1..whitespace]) {
                         Ok(x) => x,
                         Err(_) => return Err(String::from("Error parsing message prefix")),
                     };
 
-                    msg = &msg[whitespace + 1..];
+                    _msg = &_msg[whitespace + 1..];
                 }
                 None => {
                     return Err(String::from(
@@ -43,31 +43,31 @@ impl FromStr for IrcMessage {
             };
         }
 
-        if msg.contains(' ') {
-            match msg.find(' ') {
+        if _msg.contains(' ') {
+            match _msg.find(' ') {
                 Some(whitespace) => {
-                    command = match String::from_str(&msg[..whitespace]) {
+                    command = match String::from_str(&_msg[..whitespace]) {
                         Ok(x) => x,
                         Err(_) => return Err(String::from("Error parsing message command")),
                     };
-                    msg = &msg[whitespace + 1..];
+                    _msg = &_msg[whitespace + 1..];
 
-                    while msg != "" {
-                        if msg.starts_with(":") {
-                            params.push(String::from(&msg[1..]));
+                    while _msg != "" {
+                        if _msg.starts_with(":") {
+                            params.push(String::from(&_msg[1..]));
                             break;
                         }
 
-                        if !msg.contains(' ') {
-                            params.push(String::from(msg));
-                            msg = "";
+                        if !_msg.contains(' ') {
+                            params.push(String::from(_msg));
+                            let _msg: &str;
                             break;
                         }
 
-                        match msg.find(' ') {
+                        match _msg.find(' ') {
                             Some(whitespace) => {
-                                params.push(String::from(&msg[..whitespace]));
-                                msg = &msg[whitespace + 1..];
+                                params.push(String::from(&_msg[..whitespace]));
+                                _msg = &_msg[whitespace + 1..];
                             }
                             None => return Err(String::from("Error parsing message parameters")),
                         }
