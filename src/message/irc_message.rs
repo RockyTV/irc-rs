@@ -20,11 +20,11 @@ impl FromStr for MessageTag {
 
         match s.find('=') {
             Some(equals) => {
-                _key = String::from_str(&s[..equals]).unwrap();
-                _value = Some(String::from_str(&s[equals + 1..]).unwrap());
+                _key = s[..equals].to_string();
+                _value = Some(s[equals + 1..].to_string());
             }
             None => {
-                _key = String::from(s);
+                _key = s.to_string();
                 _value = None;
             }
         }
@@ -55,8 +55,8 @@ impl FromStr for IrcMessage {
     type Err = String;
     fn from_str(s: &str) -> Result<IrcMessage, String> {
         // Inspired by SirCmpwn's ChatSharp library
-        let mut _msg = s.trim();
-        let raw_msg = String::from(_msg);
+        let mut msg = s.trim();
+        let raw_msg = msg.to_string();
 
         let mut tags: Option<Vec<MessageTag>> = None;
         let mut prefix: Option<String> = None;
@@ -64,87 +64,66 @@ impl FromStr for IrcMessage {
         let mut params: Option<Vec<String>> = None;
 
         // Parse message tags
-        if _msg.starts_with("@") {
-            match _msg.find(' ') {
+        if msg.starts_with("@") {
+            match msg.find(' ') {
                 Some(whitespace) => {
-                    let _tags: &Vec<&str> = &_msg[1..whitespace].split(';').collect();
-                    tags = Some(
-                        _tags
-                            .iter()
-                            .map(|x| MessageTag::from_str(x).unwrap())
-                            .collect::<Vec<MessageTag>>(),
-                    );
+                    match msg[1..whitespace]
+                        .split(';')
+                        .into_iter()
+                        .map(|tag| MessageTag::from_str(tag))
+                        .collect::<Result<Vec<MessageTag>, String>>()
+                    {
+                        Ok(x) => tags = Some(x),
+                        Err(_) => return Err("Error parsing message tags".to_string()),
+                    };
                 }
-                None => return Err(String::from("Error parsing message tags (invalid format)")),
+                None => return Err("Error parsing message tags (invalid format)".to_string()),
             }
         }
 
         // Parse prefix
-        if _msg.starts_with(":") {
-            match _msg.find(' ') {
+        if msg.starts_with(":") {
+            match msg.find(' ') {
                 Some(whitespace) => {
-                    prefix = match String::from_str(&_msg[1..whitespace]) {
-                        Ok(x) => Some(x),
-                        Err(_) => {
-                            return Err(String::from(
-                                "Error parsing message prefix (&str) to String",
-                            ))
-                        }
-                    };
-
-                    _msg = &_msg[whitespace + 1..];
+                    prefix = Some(msg[1..whitespace].to_string());
+                    msg = &msg[whitespace + 1..];
                 }
-                None => {
-                    return Err(String::from(
-                        "Error parsing message prefix (invalid format)",
-                    ))
-                }
+                None => return Err("Error parsing message prefix (invalid format)".to_string()),
             };
         }
 
         // Parse command and treat the remaining strings as parameters
-        if _msg.contains(' ') {
-            match _msg.find(' ') {
+        if msg.contains(' ') {
+            match msg.find(' ') {
                 Some(whitespace) => {
-                    command = match String::from_str(&_msg[..whitespace]) {
-                        Ok(x) => x,
-                        Err(_) => {
-                            return Err(String::from(
-                                "Error parsing message command (&str) to String",
-                            ))
-                        }
-                    };
-                    _msg = &_msg[whitespace + 1..];
+                    command = msg[..whitespace].to_string();
+                    msg = &msg[whitespace + 1..];
 
-                    let mut _params: Vec<&str> = Vec::new();
-                    match _msg.find(':') {
+                    let mut raw_params: Vec<&str> = Vec::new();
+                    match msg.find(':') {
                         Some(colon) => {
-                            let _raw_params = _msg.split_at(colon);
-                            _params.extend(_raw_params.0.split_whitespace());
-                            _params.push(&_raw_params.1[1..]);
+                            let (params_string, last_param) = msg.split_at(colon);
+                            raw_params.extend(params_string.split_whitespace());
+                            raw_params.push(&last_param[1..]);
                             params = Some(
-                                _params
-                                    .iter()
-                                    .map(|x| String::from_str(x).unwrap())
+                                raw_params
+                                    .into_iter()
+                                    .map(|param| param.to_string())
                                     .collect::<Vec<String>>(),
                             );
                         }
                         None => {
-                            _params.extend(_msg.split_whitespace());
+                            raw_params.extend(msg.split_whitespace());
                             params = Some(
-                                _params
-                                    .iter()
-                                    .map(|param| String::from_str(param).unwrap())
+                                raw_params
+                                    .into_iter()
+                                    .map(|param| param.to_string())
                                     .collect::<Vec<String>>(),
                             );
                         }
                     }
                 }
-                None => {
-                    return Err(String::from(
-                        "Error parsing message command (invalid format)",
-                    ))
-                }
+                None => return Err("Error parsing message command (invalid format)".to_string()),
             };
         }
 
